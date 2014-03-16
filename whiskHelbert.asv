@@ -1,0 +1,8 @@
+function whiskHelbert = whiskHelbert(whiskAngle)
+    whiskAngle = whiskAngle - mean(whiskAngle);
+    time = 0:(length(whiskAngle) - 1) * 500 + 250;
+    ts = timeseries(whiskAngle, time);
+    ts.
+    x = hilbert(whiskAngle);
+    whiskHelbert = abs(x);
+    plot(abs(x));

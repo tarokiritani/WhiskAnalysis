@@ -1,0 +1,13 @@
+function whiskHilbert = whiskHilbert(whiskAngle)
+    whiskAngle = whiskAngle - mean(whiskAngle);
+    time = [0:(length(whiskAngle) - 1)] * 0.002 + 0.0015;
+    ts = timeseries(whiskAngle, time);
+    filterWindow = [5, 100];
+    tsFiltered = idealfilter(ts, filterWindow, 'pass');
+    figure;
+    plot(tsFiltered);
+    x = hilbert(whiskAngle);
+    whiskHilbert = abs(x);
+    figure;
+    plot(abs(x));
+    save
