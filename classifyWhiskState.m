@@ -17,10 +17,13 @@ p = inputParser;
 defaultThreshold = 400;
 defaultWindow = 0.6; % in second
 defaultAlgorithm = 'velocityThreshold';
+defaultDurThreshold = 0.2; % in second
 p.addRequired('whiskTs');
 p.addOptional('thresholdAngle',defaultThreshold, @isnumeric);
 p.addOptional('window',defaultWindow, @isnumeric);
-p.addOptional('algorithm',defaultAlgorithm, @ischar)
+p.addOptional('algorithm',defaultAlgorithm, @ischar);
+p.addOptional('durThreshold',defaultDurThreshold, @isnumeric);
+p.addOptional('longWhiskingTime',false);
 parse(p,whiskTs,varargin{:});
 
 samplingRate = 1/whiskTs.TimeInfo.Increment;
@@ -44,13 +47,28 @@ elseif strcmp(p.Results.algorithm, 'hilbert')
     whiskMove = whiskAngles - mean(whiskAngles);
     whiskMove = abs(hilbert(whiskMove));
     whiskMove = whiskMove > p.Results.thresholdAngle;
-    timePoints = onset:1/samplingRate:onset+length(whiskMove)*samplingRate;
+%     timePoints = onset:1/samplingRate:onset+length(whiskMove)*1/samplingRate;
     whiskMove = timeseries(whiskMove, 'StartTime', onset, 'Interval', 1/samplingRate);
+
+elseif strcmp(p.Results.algorithm, 'fft')
     
 end
 
+if p.Results.longWhiskingTime % if whisking state has to be longer than durThreshold
+    durThreshold = floor(p.Results.durThreshold/whiskTs.TimeInfo.Increment);
+    onOff = whiskMove.data;
+    for k = 1:length(onOff)
+        if onOff(max(1, k-1)) == 0
+            if any(onOff(k:min(k + durThreshold, length(onOff))) == 0)
+                onOff(k) = 0;
+            end
+        end
+    end
+    whiskMove.data = onOff;
+end
+
 onsets = diff(whiskMove.Data) == 1;
-onsets = whiskMove.Time(onsets); % this should read whiskMove.Time(find(onsets))??
+onsets = whiskMove.Time(onsets);
 offsets = diff(whiskMove.Data) == -1;
 offsets = whiskMove.Time(offsets);
 
@@ -68,7 +86,6 @@ elseif onsets(1) > offsets(1) && length(onsets) + 1 == length(offsets)
     QuietPeriods = [offsets, [onsets; whiskMove.TimeInfo.End]];
 end
 
-
 figure;
 h = plot(whiskTs - mean(whiskTs));
 hold on;
@@ -77,3 +94,4 @@ area(whiskMove.Time, squeeze(whiskMove.Data) * (ylimit(2)-ylimit(1)) + ylimit(1)
 uistack(h, 'top');
 title('Whisker angle')
 ylabel('deg')
+ 
