@@ -26,7 +26,7 @@ spikeWindow = p.Results.spikeWindow;
 for k = 1:length(crossingPoints)
         % first align to the threshold. then find the peak and align to it.
         spikeSnippets{k} = ephysTrace.resample(crossingPoints(k):1/ephysSampleRate:crossingPoints(k) + spikeWindow);
-        spikeDownIndex = find(squeeze(spikeSnippets{k}.Data) < (threshold - 1), 1, 'first');
+        spikeDownIndex = find(spikeSnippets{k}.Data < (spikeSnippets{k}.Data(1) - 1), 1, 'first');
         if ~isempty(spikeDownIndex)
             [m, i] = max(spikeSnippets{k}.Data(1:spikeDownIndex));
             peakTiming(k) = spikeSnippets{k}.Time(i);

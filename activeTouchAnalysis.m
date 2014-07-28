@@ -1,46 +1,70 @@
 function result = activeTouchAnalysis(varargin)
 strain = 'B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, 
+analysisType = 'active touch';
 mksqlite('open', 'C:\Users\kiritani\Documents\data\GitHub\experiments\db\development.sqlite3');
-query = ['SELECT * FROM analyses INNER JOIN cells ON analyses.cell_id = cells.id INNER JOIN mice ON cells.mouse_id = mice.id WHERE species_strain = "', strain, '" AND analysis_type = "active touch"'];
+query = ['SELECT * FROM analyses INNER JOIN cells ON analyses.cell_id = cells.id INNER JOIN mice ON cells.mouse_id = mice.id WHERE species_strain = "', strain, '" AND analysis_type = "', analysisType,'"'];
 queryResult = mksqlite(query);
 mksqlite('close');
 
 c = clock;
-if strcmp(strain, 'PV-Cre/ROSA-Cre-tdTomato')
-    cellType = 'PV';
-elseif strcmp (strain, 'B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato')
-    cellType = 'ETV';
-elseif strcmp (strain, 'RBP')
-    cellType = 'RBP4';
-end
-dirName = ['C:\Users\kiritani\Documents\data\analysis\activeTouch\', cellType, date, '-',num2str(c(4)), num2str(c(5))];
+
+cellTypeMap = containers.Map({'PV-Cre/ROSA-Cre-tdTomato','B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato','VIP-ires-Cre/ROSA-CreR-tdTomato','SOM-ires-Cre/ROSA-CreR-tdTomato'}, {'PV', 'ETV', 'VIP', 'SOM'});
+cellType = cellTypeMap(strain);
+analysisType = strrep(analysisType, ' ', '');
+dirName = ['C:\Users\kiritani\Documents\data\analysis\', analysisType,'\', cellType, date, '-',num2str(c(4)), num2str(c(5))];
 mkdir(dirName);
 
+%% whisk onset group analysis
+neurons = containers.Map();
+traceWindow = 1;
 for n = 1:length(queryResult)
-    [onsetSnippetsWhisker, whiskTimeVec, onsetSnippetsEphys, ephysTimeVec, onsetSnippetsSpike, onsets] = touchOnset(queryResult(n));
-    
-    % this part cam be in whiskOnset.
+    neuron = getSnippets(queryResult(n), traceWindow);
+    if neurons.isKey(int2str(queryResult(n).cell_id))
+        neurons(int2str(queryResult(n).cell_id)) = combineTwoNeuronStructures(neuron, neurons(int2str(queryResult(n).cell_id)));
+    else
+        neuron.expNum = queryResult(n).experiment_number;
+        neuron.cell_id = queryResult(n).cell_id;
+        neurons(int2str(queryResult(n).cell_id)) = neuron;
+    end
+end
+
+keys = neurons.keys;
+Neurons = cell(1, length(keys));
+for n = 1:length(keys)
+    Neurons{n} = neurons(keys{n});
+end
+
+h = 2;
+v = 4;
+
+for k = 1:length(Neurons)
+    n = Neurons{k};
     figure;
-    subplot(221)
-    plot(ephysTimeVec, onsetSnippetsEphys');
+    subplot(h, v, 1)
     hold on
-    plot(ephysTimeVec, mean(onsetSnippetsEphys, 2), 'LineWidth', 5);
-    subplot(222)
-    plot(whiskTimeVec, onsetSnippetsWhisker');
+    arrayfun(@(x) plot(n.onsetSnippetsEphys{x}.Time - mean(n.onsetSnippetsEphys{x}.Time), n.onsetSnippetsEphys{x}), 1:length(n.onsetSnippets));
+    meanOnsetSnippetsEphys = nanmean(cell2mat(arrayfun(@(x) n.onsetSnippetsEphys{x}.Data, 1:length(n.onsetSnippetsEphys), 'UniformOutput', 0)),2);
+    plot(n.onsetSnippetsEphys{1}.Time - mean(n.onsetSnippetsEphys{1}.Time), meanOnsetSnippetsEphys, 'LineWidth', 5, 'Color', 'r');
+    title(['cell ', n.expNum]) 
+    xlim([-traceWindow traceWindow])
+    xlabel('sec')
+    ylabel('Membrane potential (mV)')
+    subplot(h, v, 2)
+    plot(n.whiskTimeVec, n.onsetSnippetsWhisker');
     hold on
-    plot(whiskTimeVec, mean(onsetSnippetsWhisker, 2), 'LineWidth', 5);
+    plot(n.whiskTimeVec, mean(n.onsetSnippetsWhisker, 2), 'LineWidth', 5);
     subplot(223)
-    plot(ephysTimeVec, onsetSnippetsSpike)
+    plot(n.ephysTimeVec, n.onsetSnippetsSpike)
     hold on
-    plot(ephysTimeVec, nanmean(onsetSnippetsSpike, 2), 'LineWidth', 5)
+    plot(n.ephysTimeVec, nanmean(n.onsetSnippetsSpike, 2), 'LineWidth', 5)
     
-    figFileName = ['mouse_id ',num2str(queryResult(n).mouse_id), ' experiment_number ', queryResult(n).experiment_number, ' cell_id ', num2str(queryResult(n).cell_id), '_',num2str(n)];
+    figFileName = ['mouse_id ',num2str(queryResult(k).mouse_id), ' experiment_number ', queryResult(k).experiment_number, ' cell_id ', num2str(queryResult(n).cell_id), '_',num2str(n)];
     hgsave([dirName, filesep,figFileName])
 end
 
 end
 
-function [onsetSnippetsWhisker, whiskTimeVec, onsetSnippetsEphys, ephysTimeVec, onsetSnippetsSpike, onsets] = touchOnset(sqlRecord)
+function Snippets = getSnippets(sqlRecord, traceWindow)
 
 % load .mat files
 filesToLoad = textscan(sqlRecord.file, '%s', 'delimiter', ';');
@@ -56,21 +80,12 @@ ephysTrace = timeseries(data.ephys.trace_1, 'StartTime', ephysInterval, 'Interva
 
 onsets = find(diff(onOffTiming) == 1); % this works only when the timing is found from the movie.
 onsets = whiskTs.Time(onsets);
-onsetSnippetsWhisker = cell(1, length(onsets));
-onsetSnippetsEphys = cell(1, length(onsets));
-onsetSnippetsSpike = cell(1, length(onsets));
+Snippets.onsets = onsets;
 
-traceWindow = 1;
-for k = 1:length(onsets)
-    onsetSnippetsWhisker{k} = squeeze(whiskTs.resample(onsets(k) - traceWindow:cameraInterval:onsets(k) + traceWindow).Data);
-    onsetSnippetsEphys{k} = squeeze(ephysTrace.resample(onsets(k) - traceWindow:ephysInterval:onsets(k) + traceWindow).Data);
-    onsetSnippetsSpike{k} = squeeze(spikeTs.resample(onsets(k) - traceWindow:ephysInterval:onsets(k) + traceWindow).Data);
-end
+% Does whiskTs exist?
+Snippets.onsetSnippetsWhisker = arrayfun(@(k) whiskTs.resample(onsets(k) - traceWindow:cameraInterval:onsets(k) + traceWindow).Data, [1:length(onsets)]);
+Snippets.onsetSnippetsEphys = arrayfun(@(k) ephysTrace.resample(onsets(k) - traceWindow:ephysInterval:onsets(k) + traceWindow).Data, [1:length(onsets)]);
+Snippets.onsetSnippetsSpike = arrayfun(@(k) intersect(peakTiming(peakTiming > onsets(k) - traceWindow), peakTiming(peakTiming < onsets(k) + traceWindow))-onsets(k), [1:length(onsets)]);
 
-onsetSnippetsWhisker = cell2mat(onsetSnippetsWhisker);
-onsetSnippetsEphys = cell2mat(onsetSnippetsEphys);
-onsetSnippetsSpike = cell2mat(onsetSnippetsSpike);
-whiskTimeVec = cameraInterval * [1:size(onsetSnippetsWhisker, 1)];
-ephysTimeVec = ephysInterval * [1:size(onsetSnippetsEphys, 1)];
 end
 
