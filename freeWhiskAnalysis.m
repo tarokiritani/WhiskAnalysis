@@ -1,5 +1,5 @@
 function result = freeWhiskAnalysis(varargin)
-strain = 'VIP-ires-Cre/ROSA-CreR-tdTomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
+strain = 'B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
 analysisType = 'free whisking';
 mksqlite('open', 'C:\Users\kiritani\Documents\data\GitHub\experiments\db\development.sqlite3');
 query = ['SELECT * FROM analyses INNER JOIN cells ON analyses.cell_id = cells.id INNER JOIN mice ON cells.mouse_id = mice.id INNER JOIN users ON users.id = mice.user_id WHERE species_strain = "', strain, '" AND analysis_type = "', analysisType,'" AND email = "taro.kiritani@epfl.ch"'];
@@ -20,7 +20,7 @@ traceWindow = 1;
 for n = 1:length(queryResult)
     neuron = getSnippets(queryResult(n), traceWindow);
     if neurons.isKey(int2str(queryResult(n).cell_id))
-        neurons(int2str(queryResult(n).cell_id)) = combineTwoNeuronStructures(neuron, neurons(int2str(queryResult(n).cell_id)));
+        neurons(int2str(queryResult(n).cell_id)) = combineTwoNeuronStructures(neurons(int2str(queryResult(n).cell_id)), neuron);
     else
         neuron.expNum = queryResult(n).experiment_number;
         neuron.cell_id = queryResult(n).cell_id;
@@ -39,6 +39,21 @@ v = 4;
 
 for k = 1:length(Neurons)
     n = Neurons{k};
+    
+    for m = 1:length(n.ephysTrace)
+        figure;
+        subplot(2, 1, 1)
+        plot(n.ephysTrace{m})
+        xlim([0 60])
+        ylabel('mV')
+        subplot(2, 1, 2)
+        plot(n.whiskTrace{m})
+        xlim([0 60])
+        title(['cell ', n.expNum])
+        figName = ['cell_id', n.expNum, '_', num2str(m)];
+        hgsave([dirName, filesep, figName])
+    end
+    
     figure;
     subplot(h, v, 1)
     hold on
@@ -71,7 +86,7 @@ for k = 1:length(Neurons)
     spRate = histc(histVec,[-1 0 1]) / nn; % firing rates -1 to 0 sec and 0 to 1 sec.
     subplot(h, v, 4);
     bar(spRate(1:2))
-    set(gca, 'xticklabel',{'1 sec before onset','1 sec after whisk onset'});
+    set(gca, 'xticklabel',{'before','after'});
     ylabel('Firing frequency (Hz)')
     
     Fs = n.ephysSampleRate;  % sampling frequency
@@ -174,7 +189,7 @@ ephysInterval = 1/header.ephys.ephys.sampleRate; % usually 40k Hz.
 cameraInterval = whiskTs.TimeInfo.Increment; % usually 500 Hz.
 
 ephysTrace = timeseries(data.ephys.trace_1, 'StartTime', ephysInterval, 'Interval', ephysInterval);
-[WhiskPeriods, QuietPeriods] = classifyWhiskState(whiskTs);
+[WhiskPeriods, QuietPeriods] = classifyWhiskState(whiskTs, 'longWhiskingTime', true);
 
 Snippets.onsetSnippetsWhisker = arrayfun(@(k) whiskTs.resample(WhiskPeriods(k, 1) - traceWindow:cameraInterval:WhiskPeriods(k, 1) + traceWindow), [1:size(WhiskPeriods, 1)], 'UniformOutput', 0);
 Snippets.onsetSnippetsEphys = arrayfun(@(k) ephysTrace.resample(WhiskPeriods(k, 1) - traceWindow:ephysInterval:WhiskPeriods(k, 1) + traceWindow), [1:size(WhiskPeriods, 1)], 'UniformOutput', 0);
@@ -196,6 +211,8 @@ Snippets.spikeSnippets = spikeSnippets;
 
 Snippets.ephysSampleRate = header.ephys.ephys.sampleRate;
 Snippets.cameraInterval = cameraInterval;
+Snippets.ephysTrace{1} = ephysTrace;
+Snippets.whiskTrace{1} = whiskTs;
 
 end
 
@@ -216,10 +233,14 @@ end
 
 function s1 = combineTwoNeuronStructures(s1, s2)
     
-    fields = fieldnames(s1);
+    fields = fieldnames(s2);
     for k = 1:length(fields)
         if iscell(s1.(fields{k}))
-            s1.(fields{k}) = [s1.(fields{k}), s2.(fields{k})];
+            try 
+                s1.(fields{k}) = [s1.(fields{k}), s2.(fields{k})];
+            catch
+                s1.(fields{k}) = [s1.(fields{k}); s2.(fields{k})];
+            end
         end
     end
 end
