@@ -19,6 +19,7 @@ figure
 imagesc(ch0ImageStack);
 figure
 imagesc(ch1ImageStack);
-[FileName,PathName] = uiputfile;
-imwrite(uint16(ch0ImageStack),[fullfile(PathName, FileName),'ch0.tif'],'tif')
-imwrite(uint16(ch1ImageStack),[fullfile(PathName, FileName),'ch1.tif'],'tif')
+[FileName,PathName] = uiputfile('*.mat', 'save file paths as');
+imwrite(uint16(ch0ImageStack),[fullfile(PathName, strrep(FileName, '.mat','')),'ch0.tif'],'tif')
+imwrite(uint16(ch1ImageStack),[fullfile(PathName, strrep(FileName, '.mat','')),'ch1.tif'],'tif')
+save(fullfile(PathName,FileName), 'folders');

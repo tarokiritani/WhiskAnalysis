@@ -76,7 +76,7 @@ if onsets(1) < offsets(1) && length(onsets) == length(offsets)
     WhiskPeriods = [onsets, offsets];
     QuietPeriods = [[0; offsets], [onsets; whiskMove.TimeInfo.End]];
 elseif onsets(1) < offsets(1) && length(onsets) == length(offsets) + 1
-    WhiskPeriods = [onsest,[offsets; whiskMove.TimeInfo.End]];
+    WhiskPeriods = [onsets,[offsets; whiskMove.TimeInfo.End]];
     QuietPeriods = [[0; offsets], onsets];
 elseif onsets(1) > offsets(1) && length(onsets) == length(offsets)
     WhiskPeriods = [[0; onsets], [offsets; whiskMove.TimeInfo.End]];

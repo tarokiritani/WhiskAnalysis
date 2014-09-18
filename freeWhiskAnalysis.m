@@ -1,5 +1,5 @@
 function result = freeWhiskAnalysis(varargin)
-strain = 'B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
+strain = 'SOM-ires-Cre/ROSA-CreR-tdTomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
 analysisType = 'free whisking';
 mksqlite('open', 'C:\Users\kiritani\Documents\data\GitHub\experiments\db\development.sqlite3');
 query = ['SELECT * FROM analyses INNER JOIN cells ON analyses.cell_id = cells.id INNER JOIN mice ON cells.mouse_id = mice.id INNER JOIN users ON users.id = mice.user_id WHERE species_strain = "', strain, '" AND analysis_type = "', analysisType,'" AND email = "taro.kiritani@epfl.ch"'];
@@ -29,28 +29,39 @@ for n = 1:length(queryResult)
 end
 
 keys = neurons.keys;
-Neurons = cell(1, length(keys));
-for n = 1:length(keys)
-    Neurons{n} = neurons(keys{n});
-end
 
-h = 2;
+h = 3;
 v = 4;
 
-for k = 1:length(Neurons)
-    n = Neurons{k};
+for k = keys
+    n = neurons(k{1});
     
     for m = 1:length(n.ephysTrace)
+        wp = n.WhiskPeriods{m}';
+        cn = size(wp, 2); % column number
+        wp = wp(:);
+        wp = [wp';wp']; % whisking periods
+        
         figure;
         subplot(2, 1, 1)
-        plot(n.ephysTrace{m})
+        fh1 = plot(n.ephysTrace{m});
+        hold on
         xlim([0 60])
         ylabel('mV')
+        ylimit = ylim;
+        area(wp(:), repmat([0 1 1 0], 1, cn)* (ylimit(2)-ylimit(1)) + ylimit(1), 'baseValue',ylimit(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');       
+        uistack(fh1, 'top')      
+        
         subplot(2, 1, 2)
-        plot(n.whiskTrace{m})
+        fh2 = plot(n.whiskTrace{m});
+        hold on
         xlim([0 60])
+  
         title(['cell ', n.expNum])
         figName = ['cell_id', n.expNum, '_', num2str(m)];
+        ylimit = ylim;
+        area(wp(:), repmat([0 1 1 0], 1, cn)* (ylimit(2)-ylimit(1)) + ylimit(1), 'baseValue',ylimit(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');
+        uistack(fh2, 'top');
         hgsave([dirName, filesep, figName])
     end
     
@@ -120,11 +131,11 @@ for k = 1:length(Neurons)
     snippetsVecWhisk = cell2mat(arrayfun(@(x) f(n.whiskSnippetsEphys, x), [1:length(n.whiskSnippetsEphys)], 'UniformOutput', 0));
     snippetsVecQuiet = cell2mat(arrayfun(@(x) f(n.quietSnippetsEphys, x), [1:length(n.quietSnippetsEphys)], 'UniformOutput', 0));
     
-    Neurons{k}.whiskVm = nanmean(snippetsVecWhisk);
-    Neurons{k}.whiskVmVar = nanvar(snippetsVecWhisk);
+    n.whiskVm = nanmean(snippetsVecWhisk);
+    n.whiskVmVar = nanvar(snippetsVecWhisk);
     
-    Neurons{k}.quietVm = nanmean(snippetsVecQuiet);
-    Neuons{k}.quietVmVar = nanvar(snippetsVecQuiet);
+    n.quietVm = nanmean(snippetsVecQuiet);
+    n.quietVmVar = nanvar(snippetsVecQuiet);
     
     subplot(h, v, 6)
     bins = -85:10:45;
@@ -144,9 +155,9 @@ for k = 1:length(Neurons)
     set(gca, 'YTick', -80:10:50)
     
     g1 = @(se, x) se{x}.TimeInfo.End - se{x}.TimeInfo.Start; % maybe this part is a bit difficult to read?
-    Neurons{k}.quietFiringRate = length(cell2mat(n.whiskSnippetsSpike)) / sum(cellfun(@(x) g1(n.whiskSnippetsEphys, x), num2cell(1:length(n.whiskSnippetsEphys))));
-    Neurons{k}.whiskFiringRate = length(cell2mat(n.quietSnippetsSpike)) / sum(cellfun(@(x) g1(n.quietSnippetsEphys, x), num2cell(1:length(n.quietSnippetsEphys))));
-    
+    n.quietFiringRate = length(cell2mat(n.whiskSnippetsSpike)) / sum(cellfun(@(x) g1(n.whiskSnippetsEphys, x), num2cell(1:length(n.whiskSnippetsEphys))));
+    n.whiskFiringRate = length(cell2mat(n.quietSnippetsSpike)) / sum(cellfun(@(x) g1(n.quietSnippetsEphys, x), num2cell(1:length(n.quietSnippetsEphys))));
+    neurons(k{1}) = n;
     hgsave([dirName, filesep, figFileName])
 end
 
@@ -154,14 +165,14 @@ groupAnalysis = figure;
 h = 2;
 v = 3;
 subplot(h, v, 1);
-plot([1, 2], [cellfun(@(x) x.quietVm, Neurons)' cellfun(@(x) x.whiskVm, Neurons')], '-ro');
+plot([1, 2], [cellfun(@(x) x.quietVm, neurons.values)' cellfun(@(x) x.whiskVm, neurons.values)'], '-ro');
 xlim([0.5 2.5])
 set(gca, 'XTick',[1 2]);
 set(gca, 'xticklabel',{'quiet','whisk'});
 ylabel('Membrane potential (mV)');
 
 subplot(h, v, 2);
-plot([1, 2], [cellfun(@(x) x.quietFiringRate, Neurons)' cellfun(@(x) x.whiskFiringRate, Neurons)'], '-ro');
+plot([1, 2], [cellfun(@(x) x.quietFiringRate, neurons.values)' cellfun(@(x) x.whiskFiringRate, neurons.values)'], '-ro');
 xlim([0.5 2.5])
 set(gca, 'XTick',[1 2]);
 set(gca, 'xticklabel',{'quiet','whisk'});
@@ -213,7 +224,8 @@ Snippets.ephysSampleRate = header.ephys.ephys.sampleRate;
 Snippets.cameraInterval = cameraInterval;
 Snippets.ephysTrace{1} = ephysTrace;
 Snippets.whiskTrace{1} = whiskTs;
-
+Snippets.WhiskPeriods{1} = WhiskPeriods;
+Snippets.QuietPeriods{1} = QuietPeriods;
 end
 
 function spikePhaseAnalysis

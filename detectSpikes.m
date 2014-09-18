@@ -1,10 +1,10 @@
 function detectSpikes(threshold, varargin)
 p = inputParser;
-defaultWindow = 0.008; % in second this has to be small. otherwise busrty spikes cannot be separated.
+defaultWindow = 0.0055; % in second this has to be small. otherwise busrty spikes cannot be separated.
 p.addOptional('spikeWindow', defaultWindow, @isnumeric);
 parse(p,varargin{:});
 
-[fileName, pathName,filterIndex] = uigetfile('C:\Users\kiritani\Documents\data\cells\*.xsg', 'choose an .xsg file');
+[fileName, pathName, filterIndex] = uigetfile('C:\Users\kiritani\Documents\data\cells\*.xsg', 'choose an .xsg file');
 load(fullfile(pathName, fileName), '-mat');
 
 ephysSampleRate = header.ephys.ephys.sampleRate;
@@ -22,22 +22,24 @@ peakTiming = zeros(1, length(crossingPoints));
 spikeSnippets = cell(length(crossingPoints), 1);
 
 spikeWindow = p.Results.spikeWindow;
-
+% ephysTrace = setinterpmethod(ephysTrace, 'zoh');
 for k = 1:length(crossingPoints)
-        % first align to the threshold. then find the peak and align to it.
-        spikeSnippets{k} = ephysTrace.resample(crossingPoints(k):1/ephysSampleRate:crossingPoints(k) + spikeWindow);
-        spikeDownIndex = find(spikeSnippets{k}.Data < (spikeSnippets{k}.Data(1) - 1), 1, 'first');
-        if ~isempty(spikeDownIndex)
-            [m, i] = max(spikeSnippets{k}.Data(1:spikeDownIndex));
-            peakTiming(k) = spikeSnippets{k}.Time(i);
-            if peakTiming(k) - spikeWindow > 0 && peakTiming(k) + spikeWindow < ephysTrace.TimeInfo.End
-                spikeSnippets{k} = ephysTrace.resample(peakTiming(k) - spikeWindow:1/ephysSampleRate:peakTiming(k)+ spikeWindow);
-            else
-                spikeSnippets{k} = [];
-            end
+    % first align to the threshold. then find the peak and align to it.\
+    tic
+    spikeSnippets{k} = ephysTrace.resample(crossingPoints(k):1/ephysSampleRate:crossingPoints(k) + spikeWindow);% this part takes 0.15 sec..
+    toc
+    spikeDownIndex = find(spikeSnippets{k}.Data < (spikeSnippets{k}.Data(1) - 1), 1, 'first');
+    if ~isempty(spikeDownIndex)
+        [m, i] = max(spikeSnippets{k}.Data(1:spikeDownIndex));
+        peakTiming(k) = spikeSnippets{k}.Time(i);
+        if peakTiming(k) - spikeWindow > 0 && peakTiming(k) + spikeWindow < ephysTrace.TimeInfo.End
+            spikeSnippets{k} = ephysTrace.resample(peakTiming(k) - spikeWindow:1/ephysSampleRate:peakTiming(k)+ spikeWindow);
         else
             spikeSnippets{k} = [];
         end
+    else
+        spikeSnippets{k} = [];
+    end
 end
 
 peakTiming = peakTiming(peakTiming ~= 0);
