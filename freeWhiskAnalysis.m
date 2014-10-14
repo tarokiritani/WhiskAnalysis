@@ -26,7 +26,7 @@ for n = 1:length(queryResult)
         neuron.cell_id = queryResult(n).cell_id;
         neurons(int2str(queryResult(n).cell_id)) = neuron;
     end
-end
+end 
 
 keys = neurons.keys;
 
