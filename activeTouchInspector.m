@@ -22,7 +22,7 @@ function varargout = activeTouchInspector(varargin)
 
 % Edit the above text to modify the response to help activeTouchInspector
 
-% Last Modified by GUIDE v2.5 14-Oct-2014 16:59:01
+% Last Modified by GUIDE v2.5 28-Oct-2014 18:42:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -84,13 +84,9 @@ function edit1_Callback(hObject, eventdata, handles)
 
 % Hints: get(hObject,'String') returns contents of edit1 as text
 %        str2double(get(hObject,'String')) returns contents of edit1 as a double
-try 
-    delete(handles.vertical) 
-end
+
 sliceNum = str2double(get(hObject,'String'));
-MIJ.setSlice(sliceNum);
-axes(handles.axes1);
-handles.vertical = plot([1/500*sliceNum, 1/500*sliceNum],ylim,'r');
+handles = updateStateBySliceNum(sliceNum, handles);
 guidata(hObject, handles);
 
 % --- Executes during object creation, after setting all properties.
@@ -113,12 +109,13 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 hString = get(handles.edit1, 'String');
 try
-sliceNum = str2num(hString{1})-1;
+    sliceNum = str2num(hString{1})-1;
 catch 
     sliceNum = str2num(hString)-1;
 end
-MIJ.setSlice(sliceNum);
-set(handles.edit1, 'String', num2str(sliceNum))
+
+handles = updateStateBySliceNum(sliceNum, handles);
+guidata(hObject, handles);
 
 % --- Executes on button press in pushbutton2.
 function pushbutton2_Callback(hObject, eventdata, handles)
@@ -127,12 +124,117 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 hString = get(handles.edit1, 'String');
 try
-sliceNum = str2num(hString{1})+1;
+    sliceNum = str2num(hString{1})+1;
 catch 
     sliceNum = str2num(hString)+1;
 end
+
+handles = updateStateBySliceNum(sliceNum, handles);
+guidata(hObject, handles);
+
+function edit2_Callback(hObject, eventdata, handles)
+% hObject    handle to edit2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of edit2 as text
+%        str2double(get(hObject,'String')) returns contents of edit2 as a double
+try
+    delete(handles.area)
+end
+timing = regexp(get(hObject, 'String'), '\[(\d|\.|\s|\,)+]','match');
+timing = cellfun(@eval, timing, 'UniformOutput', false);
+timing = cell2mat(timing);
+timingFormatted = [timing; timing];
+timingFormatted = reshape(timingFormatted, 1, numel(timingFormatted));
+lowHigh = [ylim fliplr(ylim)];
+lowHigh = repmat(lowHigh, 1, numel(timingFormatted)/4);
+baseValue = ylim;
+handles.area = area(timingFormatted, lowHigh, baseValue(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');
+uistack(handles.area, 'bottom')
+timing = reshape(timing, 2, numel(timing)/2)';
+handles.onOffTiming = timing;
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function edit2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function handles = updateStateBySliceNum(sliceNum, handles)
+
+timePoint = 0.002*(sliceNum -1) + 0.0005;
 MIJ.setSlice(sliceNum);
 set(handles.edit1, 'String', num2str(sliceNum))
+set(handles.edit3, 'String', num2str(timePoint))
+
+try 
+    delete(handles.vertical) 
+end
+axes(handles.axes1);
+handles.vertical = plot([timePoint, timePoint],ylim,'r');
+handles.sliceNum = sliceNum;
+handles.timePoint = timePoint;
+
+function handles = updateStateByTime(timePoint, handles)
+
+sliceNum = round(1+ (timePoint - 0.0005)/0.002);
+MIJ.setSlice(sliceNum);
+set(handles.edit1, 'String', num2str(sliceNum))
+set(handles.edit3, 'String', num2str(timePoint))
+
+try 
+    delete(handles.vertical) 
+end
+axes(handles.axes1);
+handles.vertical = plot([timePoint, timePoint],ylim,'r');
+handles.sliceNum = sliceNum;
+handles.timePoint = timePoint;
+
+function edit3_Callback(hObject, eventdata, handles)
+% hObject    handle to edit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+timePoint = str2double(get(hObject,'String'));
+handles = updateStateByTime(timePoint, handles);
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function edit3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pushbutton6.
+function pushbutton6_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+timePoint = handles.timePoint - 0.0003;
+handles = updateStateByTime(timePoint, handles);
+guidata(hObject, handles);
+
+% --- Executes on button press in pushbutton7.
+function pushbutton7_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+timePoint = handles.timePoint + 0.0003;
+handles = updateStateByTime(timePoint, handles);
+guidata(hObject, handles);
 
 % --------------------------------------------------------------------
 function uipushtool1_ClickedCallback(hObject, eventdata, handles)
@@ -147,53 +249,10 @@ cla
 plot(piezoTrace)
 hold on
 
-
-% --- Executes on button press in pushbutton3.
-function pushbutton3_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton3 (see GCBO)
+% --------------------------------------------------------------------
+function uipushtool2_ClickedCallback(hObject, eventdata, handles)
+% hObject    handle to uipushtool2 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-axes(handles.axes1);
-[x, y, button] = ginput(1);
-
-
-% --- Executes on button press in pushbutton4.
-function pushbutton4_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton4 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-
-function edit2_Callback(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of edit2 as text
-%        str2double(get(hObject,'String')) returns contents of edit2 as a double
-try
-    delete(handles.area)
-end
-timing = regexp(get(hObject, 'String'), '\[(\d|\.|\s|\,)+]','match');
-timing = cellfun(@eval, timing, 'UniformOutput', false);
-timing = [cell2mat(timing); cell2mat(timing)];
-timing = reshape(timing, 1, numel(timing));
-lowHigh = [ylim fliplr(ylim)];
-lowHigh = repmat(lowHigh, 1, numel(timing)/4);
-baseValue = ylim;
-handles.area = area(timing, lowHigh, baseValue(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');
-uistack(handles.area, 'bottom')
-guidata(hObject, handles);
-
-% --- Executes during object creation, after setting all properties.
-function edit2_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit2 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
+onOffTiming = handles.onOffTiming;
+uisave('onOffTiming');
