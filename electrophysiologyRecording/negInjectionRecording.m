@@ -1,8 +1,8 @@
 classdef negInjectionRecording < patchWhiskingRecording
     
     methods
-        function obj = negInjectionRecording(files)
-            obj@patchWhiskingRecording(files);
+        function obj = negInjectionRecording(xsgFile, spikeFile, whiskFile)
+            obj@patchWhiskingRecording(xsgFile, spikeFile, whiskFile);
         end
         
         function ts = getAverageTrace(obj)

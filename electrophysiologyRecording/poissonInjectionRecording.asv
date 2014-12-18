@@ -4,10 +4,18 @@ classdef poissonInjectionRecording < patchWhiskingRecording
     end
     
     methods
-        function obj = poissonInjectionRecording(xsgFile, spikeFile, whiskFile, cInjectionFile)
-            obj@patchWhiskingRecording(xsgFile, spikeFile, whiskFile)
+        function obj = poissonInjectionRecording(xsgFile, spikeFile, whiskFile)
+            obj@patchWhiskingRecording(xsgFile, spikeFile, whiskFile, cInjectionFile)
+            filesToLoad = textscan(files, '%s', 'delimiter', ';');
+            filesToLoad = filesToLoad{1};
+            for k = 1:length(filesToLoad)
+                if(strfind(filesToLoad{k}, 'xsg'))
+                    xsgFile = filesToLoad{k}; 
+                elseif(strfind(filesToLoad{k}, 'signal'))
+                    load(filesToLoad{k});
+                end
+            end
             load(xsgFile, '-mat')
-            load(cInjectionFile)
             s = get(signal,'signal');
             ephysInterval = 1/header.ephys.ephys.sampleRate; % usually 40k Hz.
             obj.currentInjection = timeseries(s, 'StartTime', ephysInterval, 'Interval', ephysInterval);

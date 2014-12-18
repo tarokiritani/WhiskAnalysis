@@ -4,17 +4,8 @@ classdef patchWhiskingRecording < patchRecording
     end
     
     methods
-        function obj = patchWhiskingRecording(files)
-            filesToLoad = textscan(files, '%s', 'delimiter', ';');
-            filesToLoad = filesToLoad{1};
-            for k = 1:length(filesToLoad)
-                if~(strfind(filesToLoad{k}, 'xsg'))
-                    if~(strfind(filesToLoad{k}, 'pike'))
-                        whiskFile = filesToLoad{k};
-                    end
-                end
-            end
-            obj@patchRecording(files);
+        function obj = patchWhiskingRecording(xsgFile, spikeFile, whiskFile)
+            obj@patchRecording(xsgFile, spikeFile);
             load(whiskFile)
             obj.whiskTrace = whiskTs;
         end

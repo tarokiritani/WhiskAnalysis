@@ -18,6 +18,12 @@ neurons = containers.Map();
 for n = 1:length(queryResult)
     
     files = textscan(sqlRecord(n).file, '%s', 'delimiter', ';');
+    for m = 1:length(files)
+        if whos(files(m))
+        end
+    end
+    
+    
     pir = poissonInjectionRecording(files);
     figure;
     subplot(311)

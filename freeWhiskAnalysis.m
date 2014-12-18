@@ -1,5 +1,5 @@
 function result = freeWhiskAnalysis(varargin)
-strain = 'B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
+strain = 'SOM-ires-Cre/ROSA-CreR-tdTomato'; % PV-Cre/ROSA-Cre-tdTomato, B6(Cg)-Etv1<tm1.1(cre/ERT2)Zjh>/J/ROSA-CreRtomato, VIP-ires-Cre/ROSA-CreR-tdTomato, SOM-ires-Cre/ROSA-CreR-tdTomato
 analysisType = 'free whisking';
 mksqlite('open', 'C:\Users\kiritani\Documents\data\GitHub\experiments\db\development.sqlite3');
 query = ['SELECT * FROM analyses INNER JOIN cells ON analyses.cell_id = cells.id INNER JOIN mice ON cells.mouse_id = mice.id INNER JOIN users ON users.id = mice.user_id WHERE species_strain = "', strain, '" AND analysis_type = "', analysisType,'" AND email = "taro.kiritani@epfl.ch"'];
@@ -27,7 +27,7 @@ for n = 1:length(queryResult)
         neurons(int2str(queryResult(n).cell_id)) = neuron;
     end
 end 
-
+close all;
 keys = neurons.keys;
 
 h = 3;
@@ -51,13 +51,13 @@ for k = keys
         ylimit = ylim;
         area(wp(:), repmat([0 1 1 0], 1, cn)* (ylimit(2)-ylimit(1)) + ylimit(1), 'baseValue',ylimit(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');       
         uistack(fh1, 'top')      
-        
+        title(['cell ', n.expNum])
         subplot(2, 1, 2)
         fh2 = plot(n.whiskTrace{m});
         hold on
         xlim([0 60])
-  
-        title(['cell ', n.expNum])
+        title('')
+        ylabel('deg')
         figName = ['cell_id', n.expNum, '_', num2str(m)];
         ylimit = ylim;
         area(wp(:), repmat([0 1 1 0], 1, cn)* (ylimit(2)-ylimit(1)) + ylimit(1), 'baseValue',ylimit(1), 'FaceColor', [0.8 0.9 0.9], 'LineStyle', 'none');
