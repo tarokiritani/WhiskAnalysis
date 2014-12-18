@@ -15,7 +15,7 @@ dirName = ['C:\Users\kiritani\Documents\data\analysis\', analysisType,'\', cellT
 mkdir(dirName);
 
 neurons = containers.Map();
-for n = 1:length(queryResult)    
+for n = 1:length(queryResult)
     M = mapExpFiles(sqlRecord(n).file);
     pir = poissonInjectionRecording(M('xsgFile'), M('spikeFile'), M('whiskFile'), M('cInjectionFile'));
     figure;
