@@ -7,11 +7,11 @@ for m = 1:numel(files)
         M('xsgFile') = files{m};
     elseif sum(strcmp('spikeTs', who('-file', files{m})))
         M('spikeFile') = files{m};
-    elseif sum(strcmp('whiskTs', who('-file',files{m})))
+    elseif sum(strcmp('whiskTs', who('-file', files{m})))
         M('whiskFile') = files{m};
-    elseif sum(strcmp('onOffTiming', who('-file',files{m})))
+    elseif sum(strcmp('onOffTiming', who('-file', files{m})))
         M('activeTouchFile') = files{m};
-    elseif sum(strcmp('', who('-file',files{m})))
-        M('poissonFile') = files{m};
+    elseif sum(strcmp('signal', who('-file', files{m})))
+        M('cInjectionFile') = files{m};
     end
 end
