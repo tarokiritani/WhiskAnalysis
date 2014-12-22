@@ -25,6 +25,9 @@ local.properties
 # CDT-specific
 .cproject
 
+# Matlab autosave file
+.asv
+
 # PDT-specific
 .buildpath
 

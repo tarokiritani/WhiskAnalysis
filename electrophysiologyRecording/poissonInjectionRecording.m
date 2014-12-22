@@ -7,25 +7,25 @@ classdef poissonInjectionRecording < patchWhiskingRecording
         function obj = poissonInjectionRecording(xsgFile, spikeFile, whiskFile, cInjectionFile)
             obj@patchWhiskingRecording(xsgFile, spikeFile, whiskFile)
             load(xsgFile, '-mat')
-            load(cInjectionFile)
+            load(cInjectionFile, '-mat')
             s = get(signal,'signal');
             ephysInterval = 1/header.ephys.ephys.sampleRate; % usually 40k Hz.
             obj.currentInjection = timeseries(s, 'StartTime', ephysInterval, 'Interval', ephysInterval);
         end
         
         function ci = getCurrentInjection(obj)
-            ci = currentInjection;
+            ci = obj.currentInjection;
         end
         
         function onsets = getOnsetTiming(obj)
-            currentDeriv = diff(obj.curentInjection.Data);
-            onsets = find(CurrentDeriv > 0);
+            currentDeriv = diff(obj.currentInjection.Data);
+            onsets = find(currentDeriv > 0);
             onsets = obj.currentInjection.Time(onsets);
         end
         
         function offsets = getOffsetTiming(obj)
-            currentDeriv = diff(obj.curentInjection.Data);
-            offsets = find(CurrentDeriv < 0);
+            currentDeriv = diff(obj.currentInjection.Data);
+            offsets = find(currentDeriv < 0);
             offsets = obj.currentInjection.Time(offsets);
         end
         
