@@ -4,7 +4,7 @@ classdef activeTouchRecording < patchWhiskingRecording
     end
     
     methods
-        function obj = activeTouchRecording(xsgFile, spikeFile, whiskFile)
+        function obj = activeTouchRecording(xsgFile, spikeFile, whiskFile, activeTouchFile)
             obj@patchWhiskingRecording(xsgFile, spikeFile, whiskFile)
             load(files)
             obj.onOffTiming = onOffTiming;

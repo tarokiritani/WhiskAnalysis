@@ -18,6 +18,10 @@ mkdir(dirName);
 neurons = containers.Map();
 traceWindow = 1;
 for n = 1:length(queryResult)
+    M = mapExpFiles(queryResult(n).files);
+    atr = activeTouchRecording(M('xsgFile'), M('spikeFile'), M('whiskFile'), M('activeTouchFile'));
+    
+    
     neuron = getSnippets(queryResult(n), traceWindow);
     if neurons.isKey(int2str(queryResult(n).cell_id))
         neurons(int2str(queryResult(n).cell_id)) = combineTwoNeuronStructures(neuron, neurons(int2str(queryResult(n).cell_id)));
